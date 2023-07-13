@@ -14,6 +14,7 @@ def __display_img(
     beginPadding: int,
     endPadding: int,
     leftPadding: int,
+    interpolation: int,
 ) -> None:
     """
     Display an image by printing half blocks with foreground and background colors to the terminal.
@@ -25,6 +26,7 @@ def __display_img(
         beginPadding (int): number of empty lines before the image
         endPadding (int): number of empty lines after the image
         leftPadding (int): number of empty spaces at the beginning of each line of the image
+        interpolation (int): interpolation method used to resize the image
     """
 
     # open the image
@@ -44,7 +46,7 @@ def __display_img(
     imgResized = __cv2.resize(
         img,
         (int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2),
-        interpolation=__cv2.INTER_AREA,
+        interpolation=interpolation,
     )
 
     # print the begin padding
@@ -100,6 +102,7 @@ def __display_video(
     beginPadding: int,
     endPadding: int,
     leftPadding: int,
+    interpolation: int,
 ) -> None:
     """
     Display a video by printing half blocks with foreground and background colors to the terminal.
@@ -111,6 +114,7 @@ def __display_video(
         beginPadding (int): number of empty lines before the image
         endPadding (int): number of empty lines after the image
         leftPadding (int): number of empty spaces at the beginning of each line of the image
+        interpolation (int): interpolation method used to resize the image
     """
 
     import cv2 as __cv2
@@ -143,7 +147,7 @@ def __display_video(
         imgResized = __cv2.resize(
             frame,
             (int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2),
-            interpolation=__cv2.INTER_AREA,
+            interpolation=interpolation,
         )
 
         # print the begin padding
@@ -239,6 +243,13 @@ def __main():
         default=1,
         help="number of empty spaces at the beginning of each line of the image",
     )
+    parser.add_argument(
+        "--interpolation",
+        type=str,
+        default="AREA",
+        help="interpolation method used to resize the image",
+        choices=[v[6:] for v in dir(__cv2) if v.startswith('INTER_')],
+    )
 
     # parse the arguments
     terminalSize = __os.get_terminal_size()
@@ -247,6 +258,7 @@ def __main():
         args.heightLimit = terminalSize.lines - args.beginPadding - args.endPadding
     if args.widthLimit is None:
         args.widthLimit = terminalSize.columns - args.leftPadding
+    args.interpolation = getattr(__cv2, f"INTER_{args.interpolation}")
 
     # get path from the arguments
     filePath = args.path
@@ -268,6 +280,7 @@ def __main():
             args.beginPadding,
             args.endPadding,
             args.leftPadding,
+            args.interpolation,
         )
 
     elif __is_video_file(filePath):
@@ -279,6 +292,7 @@ def __main():
             args.beginPadding,
             args.endPadding,
             args.leftPadding,
+            args.interpolation,
         )
 
 
