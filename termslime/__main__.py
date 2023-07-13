@@ -29,7 +29,7 @@ def __display(imgPath: str, heightLimit: int, widthLimit: int, beginPadding: int
     resizeRatio = imgWidth / widthLimit if int(imgWidth / resizeRatio) > widthLimit else resizeRatio
 
     # compress the image to fit the width and height limits and make sure the compressed height is even
-    imgResized = img.resize((int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2), __Image.Resampling.NEAREST)
+    imgResized = img.resize((int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2), __Image.Resampling.LANCZOS)
 
     # print the begin padding
     print("\n" * beginPadding, end="")
