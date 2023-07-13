@@ -1,11 +1,7 @@
-import colorful as __cf
 import argparse as __argparse
 import os as __os
 import cv2 as __cv2
 import random as __random
-
-# use true colors to display the image
-__cf.use_true_colors()
 
 def __display_img(
     imgPath: str,
@@ -71,25 +67,18 @@ def __display_img(
 
             # if only the upper pixel is transparent, print a lower half block with the lower pixel's color as the foreground color
             elif pixelUpper[-1] == 0:
-                p["fore"] = tuple(pixelLower[:-1])
-                with __cf.with_palette(p) as c:
-                    print(c.fore("▄"), end="")
+                print(f"\033[38;2;{pixelLower[0]};{pixelLower[1]};{pixelLower[2]}m▄", end="")
 
             # if only the lower pixel is transparent, print a upper half block with the upper pixel's color as the foreground color
             elif pixelLower[-1] == 0:
-                p["fore"] = tuple(pixelUpper[:-1])
-                with __cf.with_palette(p) as c:
-                    print(c.fore("▀"), end="")
+                print(f"\033[48;2;{pixelUpper[0]};{pixelUpper[1]};{pixelUpper[2]}m▀", end="")
 
             # if either of the two pixels is transparent, print a lower half block with the corresponding pixel's color as the foreground and background colors
             else:
-                p["fore"] = tuple(pixelLower[:-1])
-                p["back"] = tuple(pixelUpper[:-1])
-                with __cf.with_palette(p) as c:
-                    print(c.fore_on_back("▄"), end="")
+                print(f"\033[48;2;{pixelUpper[0]};{pixelUpper[1]};{pixelUpper[2]}m\033[38;2;{pixelLower[0]};{pixelLower[1]};{pixelLower[2]}m▄", end="")
 
         # start a new row
-        print()
+        print("\033[0m")
 
     # print the end padding
     print("\n" * endPadding, end="")
@@ -165,12 +154,10 @@ def __display_video(
                 pixelUpper = imgResized[x, y]
                 pixelLower = imgResized[x + 1, y]
 
-                p = {"fore": tuple(pixelLower), "back": tuple(pixelUpper)}
-                with __cf.with_palette(p) as c:
-                    print(c.fore_on_back("▄"), end="")
+                print(f"\033[48;2;{pixelUpper[0]};{pixelUpper[1]};{pixelUpper[2]}m\033[38;2;{pixelLower[0]};{pixelLower[1]};{pixelLower[2]}m▄", end="")
 
             # start a new row
-            print()
+            print("\033[0m")
 
         # print the end padding
         print("\n" * endPadding, end="")
@@ -272,7 +259,6 @@ def __main():
         filePath = __os.path.join(filePath, __random.choice(imgList))
 
     if __is_img_file(filePath):
-        # call the display funcPathtion and pass in the arguments
         __display_img(
             filePath,
             args.heightLimit,
@@ -284,7 +270,6 @@ def __main():
         )
 
     elif __is_video_file(filePath):
-        # call the display function and pass in the arguments
         __display_video(
             filePath,
             args.heightLimit,
