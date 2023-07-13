@@ -1,6 +1,7 @@
 import colorful as __cf
 import argparse as __argparse
 import os as __os
+import cv2 as __cv2
 import random as __random
 
 # use true colors to display the image
@@ -14,24 +15,22 @@ def __display_img(
     endPadding: int,
     leftPadding: int,
 ) -> None:
-    
     """
     Display an image by printing half blocks with foreground and background colors to the terminal.
 
     Args:
-        imgPath - the path to the image file
-        heightLimit - maximum number of lines of blocks to display the image in the terminal
-        widthLimit - maximum number of blocks per line to display the image in the terminal
-        beginPadding - number of empty lines before the image
-        endPadding - number of empty lines after the image
-        leftPadding - number of empty spaces at the beginning of each line of the image
+        imgPath (str): the path to the image file
+        heightLimit (int): maximum number of lines of blocks to display the image in the terminal
+        widthLimit (int): maximum number of blocks per line to display the image in the terminal
+        beginPadding (int): number of empty lines before the image
+        endPadding (int): number of empty lines after the image
+        leftPadding (int): number of empty spaces at the beginning of each line of the image
     """
 
-    import PIL.Image as __Image
-
-    # open the image and convert it to 256 colors and get its width and height
-    img = __Image.open(imgPath).convert(mode="RGBA")
-    imgWidth, imgHeight = img.size[0], img.size[1]
+    # open the image
+    img = __cv2.imread(imgPath, __cv2.IMREAD_UNCHANGED)
+    img = __cv2.cvtColor(img, __cv2.COLOR_BGR2RGBA)
+    imgWidth, imgHeight = img.shape[1], img.shape[0]
 
     # calculate the resize ratio
     resizeRatio = imgHeight / (heightLimit * 2) if imgHeight > heightLimit * 2 else 1
@@ -42,27 +41,27 @@ def __display_img(
     )
 
     # compress the image to fit the width and height limits and make sure the compressed height is even
-    imgResized = img.resize(
+    imgResized = __cv2.resize(
+        img,
         (int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2),
-        __Image.Resampling.LANCZOS,
+        interpolation=__cv2.INTER_AREA,
     )
 
     # print the begin padding
     print("\n" * beginPadding, end="")
-
     # for each two row numbers x and x+1 of pixels
-    for x in range(0, imgResized.size[1], 2):
+    for x in range(0, imgResized.shape[0], 2):
         # print the left padding
         print(" " * leftPadding, end="")
 
         # for each column number y of pixels
-        for y in range(0, imgResized.size[0]):
+        for y in range(0, imgResized.shape[1]):
             # initialize the palette
             p = {}
 
             # get the two pixels that will be displayed in the same block in the terminal
-            pixelUpper = imgResized.getpixel((y, x))
-            pixelLower = imgResized.getpixel((y, x + 1))
+            pixelUpper = imgResized[x, y]
+            pixelLower = imgResized[x + 1, y]
 
             # if the two pixels are transparent, print a space
             if pixelUpper[-1] == 0 and pixelLower[-1] == 0:
@@ -113,7 +112,7 @@ def __display_video(
         endPadding (int): number of empty lines after the image
         leftPadding (int): number of empty spaces at the beginning of each line of the image
     """
-    
+
     import cv2 as __cv2
 
     cap = __cv2.VideoCapture(videoPath)
@@ -144,7 +143,7 @@ def __display_video(
         imgResized = __cv2.resize(
             frame,
             (int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2),
-            interpolation=__cv2.INTER_LANCZOS4,
+            interpolation=__cv2.INTER_AREA,
         )
 
         # print the begin padding
@@ -173,7 +172,6 @@ def __display_video(
         print("\n" * endPadding, end="")
 
     cap.release()
-
 
 
 def __is_img_file(path: str) -> bool:
