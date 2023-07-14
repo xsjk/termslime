@@ -2,6 +2,10 @@ import argparse as __argparse
 import os as __os
 import cv2 as __cv2
 import random as __random
+import time as __time
+import threading as __threading
+import queue as __queue
+import joblib as __joblib
 
 def __display_img(
     imgPath: str,
@@ -46,42 +50,40 @@ def __display_img(
     )
 
     # print the begin padding
-    print("\n" * beginPadding, end="")
+    print(end="\n" * beginPadding)
     # for each two row numbers x and x+1 of pixels
     for x in range(0, imgResized.shape[0], 2):
         # print the left padding
-        print(" " * leftPadding, end="")
+        print(end=" " * leftPadding)
 
         # for each column number y of pixels
         for y in range(0, imgResized.shape[1]):
-            # initialize the palette
-            p = {}
-
             # get the two pixels that will be displayed in the same block in the terminal
-            pixelUpper = imgResized[x, y]
-            pixelLower = imgResized[x + 1, y]
+            pU = imgResized[x, y]
+            pL = imgResized[x + 1, y]
 
             # if the two pixels are transparent, print a space
-            if pixelUpper[-1] == 0 and pixelLower[-1] == 0:
-                print(" ", end="")
+            if pU[-1] == 0 and pL[-1] == 0:
+                print(end=" ")
 
             # if only the upper pixel is transparent, print a lower half block with the lower pixel's color as the foreground color
-            elif pixelUpper[-1] == 0:
-                print(f"\033[38;2;{pixelLower[0]};{pixelLower[1]};{pixelLower[2]}m▄", end="")
+            elif pU[-1] == 0:
+                print(f"\033[0m\033[38;2;{pL[0]};{pL[1]};{pL[2]}m", end="▄")
 
             # if only the lower pixel is transparent, print a upper half block with the upper pixel's color as the foreground color
-            elif pixelLower[-1] == 0:
-                print(f"\033[48;2;{pixelUpper[0]};{pixelUpper[1]};{pixelUpper[2]}m▀", end="")
+            elif pL[-1] == 0:
+                print(f"\033[0m\033[38;2;{pU[0]};{pU[1]};{pU[2]}m", end="▀")
 
             # if either of the two pixels is transparent, print a lower half block with the corresponding pixel's color as the foreground and background colors
             else:
-                print(f"\033[48;2;{pixelUpper[0]};{pixelUpper[1]};{pixelUpper[2]}m\033[38;2;{pixelLower[0]};{pixelLower[1]};{pixelLower[2]}m▄", end="")
+                print(f"\033[48;2;{pU[0]};{pU[1]};{pU[2]}m\033[38;2;{pL[0]};{pL[1]};{pL[2]}m", end="▄")
 
         # start a new row
         print("\033[0m")
 
     # print the end padding
-    print("\n" * endPadding, end="")
+    print(end="\n" * endPadding)
+
 
 
 def __display_video(
@@ -110,73 +112,84 @@ def __display_video(
 
     cap = __cv2.VideoCapture(videoPath)
 
-    # __os.system("cls" if __platform.system() == "Windows" else "clear")
-    print("\033[2J", end="")
-
-    while cap.isOpened():
-        ret, frame = cap.read()
-
-        # move the cursor to the top left corner of the terminal
-        print("\033[0;0H", end="")
-
+    try:
         # clear the terminal
+        print("\033[2J", end="")
+
+        # hide the cursor
+        print("\033[?25l", end="")
+
+        data_queue = __queue.Queue(maxsize=1)
+        running = True
+        
+        def row_to_str(frame, i):
+            s = ""
+            for j in range(frame.shape[1]):
+                pU = frame[i, j]
+                pL = frame[i + 1, j]
+                s += f"\033[{beginPadding+i//2+1};{leftPadding+j+1}H"
+                s += f"\033[48;2;{pU[0]};{pU[1]};{pU[2]}m"
+                s += f"\033[38;2;{pL[0]};{pL[1]};{pL[2]}m"
+                s += "▄"
+            return s
+        
+        def to_str(frame):
+            return ''.join(__joblib.Parallel(n_jobs=16)(__joblib.delayed(row_to_str)(frame, i) for i in range(0, frame.shape[0], 2)))
+
+        def print_str():
+            while running:
+                try:
+                    s = data_queue.get(timeout=0.5)
+                except __queue.Empty:
+                    pass
+                else:
+                    t = __time.time()
+                    print(end=s)
+                    # print(end=f"\033[{2};0H\033[0m print FPS: {1/(__time.time()-t):.2f}")
+
+        print_thread = __threading.Thread(target=print_str)
+        print_thread.start()
+
+        # first frame
+        _, frame = cap.read()
+
         imgWidth, imgHeight = frame.shape[1], frame.shape[0]
-
         # calculate the resize ratio
-        resizeRatio = (
-            imgHeight / (heightLimit * 2) if imgHeight > heightLimit * 2 else 1
-        )
-        resizeRatio = (
-            imgWidth / widthLimit
-            if int(imgWidth / resizeRatio) > widthLimit
-            else resizeRatio
-        )
+        resizeRatio = max(1, imgHeight / (heightLimit * 2), imgWidth / widthLimit)
+        newSize = (int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2)
 
-        # compress the image to fit the width and height limits and make sure the compressed height is even
-        imgResized = __cv2.resize(
-            frame,
-            (int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2),
-            interpolation=interpolation,
-        )
+        while frame is not None:
+            t = __time.time()
+            s = to_str(__cv2.resize(frame, newSize, interpolation=interpolation))
+            data_queue.put(s)
+            _, frame = cap.read()
+            # print(end=f"\033[{1};0H\033[0m tostr FPS: {1/(__time.time()-t):.2f}")
 
-        # print the begin padding
-        print("\n" * beginPadding, end="")
-        # for each two row numbers x and x+1 of pixels
-        for x in range(0, imgResized.shape[0], 2):
-            # print the left padding
-            print(" " * leftPadding, end="")
+    except KeyboardInterrupt:
+        pass
 
-            # for each column number y of pixels
-            for y in range(0, imgResized.shape[1]):
-                # initialize the palette
+    finally:
+        
+        running = False
+        print_thread.join()
 
-                # get the two pixels that will be displayed in the same block in the terminal
-                pixelUpper = imgResized[x, y]
-                pixelLower = imgResized[x + 1, y]
+        # reset the foreground and background colors
+        print("\033[0m", end="")
 
-                print(f"\033[48;2;{pixelUpper[0]};{pixelUpper[1]};{pixelUpper[2]}m\033[38;2;{pixelLower[0]};{pixelLower[1]};{pixelLower[2]}m▄", end="")
-
-            # start a new row
-            print("\033[0m")
+        # show the cursor
+        print("\033[?25h", end="")
 
         # print the end padding
-        print("\n" * endPadding, end="")
+        print(f"\033[{beginPadding+newSize[1]//2+endPadding+1};1H", end="")
 
-    cap.release()
+        cap.release()
 
 
 def __is_img_file(path: str) -> bool:
-    return (
-        path.endswith(".png")
-        or path.endswith(".jpg")
-        or path.endswith(".jpeg")
-        or path.endswith(".bmp")
-    )
-
+    return any(path.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".bmp"))
 
 def __is_video_file(path: str) -> bool:
-    return path.endswith(".mp4") or path.endswith(".avi") or path.endswith(".mkv")
-
+    return any(path.endswith(ext) for ext in (".mp4", ".avi", ".mkv"))
 
 def __main():
     """
@@ -235,7 +248,7 @@ def __main():
         type=str,
         default="AREA",
         help="interpolation method used to resize the image",
-        choices=[v[6:] for v in dir(__cv2) if v.startswith('INTER_')],
+        choices=[v[6:] for v in dir(__cv2) if v.startswith("INTER_")],
     )
 
     # parse the arguments
@@ -245,6 +258,10 @@ def __main():
         args.heightLimit = terminalSize.lines - args.beginPadding - args.endPadding
     if args.widthLimit is None:
         args.widthLimit = terminalSize.columns - args.leftPadding
+
+    assert (args.heightLimit <= terminalSize.lines), f"height limit exceeds terminal height {terminalSize.lines}"
+    assert (args.widthLimit <= terminalSize.columns), f"width limit exceeds terminal width {terminalSize.columns}"
+
     args.interpolation = getattr(__cv2, f"INTER_{args.interpolation}")
 
     # get path from the arguments
