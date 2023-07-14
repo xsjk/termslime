@@ -35,19 +35,12 @@ def __display_img(
     imgWidth, imgHeight = img.shape[1], img.shape[0]
 
     # calculate the resize ratio
-    resizeRatio = imgHeight / (heightLimit * 2) if imgHeight > heightLimit * 2 else 1
-    resizeRatio = (
-        imgWidth / widthLimit
-        if int(imgWidth / resizeRatio) > widthLimit
-        else resizeRatio
-    )
+
+    resizeRatio = max(1, imgHeight / (heightLimit * 2), imgWidth / widthLimit)
+    newSize = (int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2)
 
     # compress the image to fit the width and height limits and make sure the compressed height is even
-    imgResized = __cv2.resize(
-        img,
-        (int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2),
-        interpolation=interpolation,
-    )
+    imgResized = __cv2.resize(img, newSize, interpolation=interpolation)
 
     # print the begin padding
     print(end="\n" * beginPadding)
@@ -68,22 +61,21 @@ def __display_img(
 
             # if only the upper pixel is transparent, print a lower half block with the lower pixel's color as the foreground color
             elif pU[-1] == 0:
-                print(f"\033[0m\033[38;2;{pL[0]};{pL[1]};{pL[2]}m", end="▄")
+                print(end=f"\033[0m\033[38;2;{pL[0]};{pL[1]};{pL[2]}m▄")
 
             # if only the lower pixel is transparent, print a upper half block with the upper pixel's color as the foreground color
             elif pL[-1] == 0:
-                print(f"\033[0m\033[38;2;{pU[0]};{pU[1]};{pU[2]}m", end="▀")
+                print(end=f"\033[0m\033[38;2;{pU[0]};{pU[1]};{pU[2]}m▀")
 
             # if either of the two pixels is transparent, print a lower half block with the corresponding pixel's color as the foreground and background colors
             else:
-                print(f"\033[48;2;{pU[0]};{pU[1]};{pU[2]}m\033[38;2;{pL[0]};{pL[1]};{pL[2]}m", end="▄")
+                print(end=f"\033[48;2;{pU[0]};{pU[1]};{pU[2]}m\033[38;2;{pL[0]};{pL[1]};{pL[2]}m▄")
 
         # start a new row
         print("\033[0m")
 
     # print the end padding
     print(end="\n" * endPadding)
-
 
 
 def __display_video(
@@ -112,6 +104,14 @@ def __display_video(
 
     cap = __cv2.VideoCapture(videoPath)
 
+    fps = cap.get(__cv2.CAP_PROP_FPS)
+    frameCount = int(cap.get(__cv2.CAP_PROP_FRAME_COUNT))
+    duration = frameCount / fps
+
+    print(f"fps: {fps:.2f}")
+    print(f"frame count: {frameCount}")
+    print(f"duration: {duration:.2f}s")
+
     try:
         # clear the terminal
         print("\033[2J", end="")
@@ -121,7 +121,7 @@ def __display_video(
 
         data_queue = __queue.Queue(maxsize=1)
         running = True
-        
+
         def row_to_str(frame, i):
             s = ""
             for j in range(frame.shape[1]):
@@ -132,19 +132,29 @@ def __display_video(
                 s += f"\033[38;2;{pL[0]};{pL[1]};{pL[2]}m"
                 s += "▄"
             return s
-        
+
         def to_str(frame):
-            return ''.join(__joblib.Parallel(n_jobs=16)(__joblib.delayed(row_to_str)(frame, i) for i in range(0, frame.shape[0], 2)))
+            return "".join(
+                __joblib.Parallel(n_jobs=16)(
+                    __joblib.delayed(row_to_str)(frame, i)
+                    for i in range(0, frame.shape[0], 2)
+                )
+            )
+
+        start_time = __time.time()
+        virtual_time: float = 0
 
         def print_str():
+            nonlocal virtual_time
+
             while running:
                 try:
                     s = data_queue.get(timeout=0.5)
                 except __queue.Empty:
                     pass
                 else:
-                    t = __time.time()
                     print(end=s)
+                    virtual_time = __time.time() - start_time
                     # print(end=f"\033[{2};0H\033[0m print FPS: {1/(__time.time()-t):.2f}")
 
         print_thread = __threading.Thread(target=print_str)
@@ -159,9 +169,22 @@ def __display_video(
         newSize = (int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2)
 
         while frame is not None:
-            t = __time.time()
-            s = to_str(__cv2.resize(frame, newSize, interpolation=interpolation))
-            data_queue.put(s)
+            resized_frame = __cv2.resize(frame, newSize, interpolation=interpolation)
+            real_colored_frame = __cv2.cvtColor(resized_frame, __cv2.COLOR_BGR2RGBA)
+            data_queue.put(to_str(real_colored_frame))
+
+            cur_frame = cap.get(__cv2.CAP_PROP_POS_FRAMES)
+
+            if virtual_time < cur_frame / fps:
+                # too fast
+                __time.sleep(0.01)
+            else:
+                # too slow
+                num_frames_to_skip = int(virtual_time * fps - cur_frame)
+                print(end=f"\033[{1};0H\033[0m skip {num_frames_to_skip} frames")
+                if num_frames_to_skip > 0:
+                    cap.set(__cv2.CAP_PROP_POS_FRAMES, cur_frame + num_frames_to_skip)
+
             _, frame = cap.read()
             # print(end=f"\033[{1};0H\033[0m tostr FPS: {1/(__time.time()-t):.2f}")
 
@@ -169,7 +192,6 @@ def __display_video(
         pass
 
     finally:
-        
         running = False
         print_thread.join()
 
@@ -188,8 +210,10 @@ def __display_video(
 def __is_img_file(path: str) -> bool:
     return any(path.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".bmp"))
 
+
 def __is_video_file(path: str) -> bool:
     return any(path.endswith(ext) for ext in (".mp4", ".avi", ".mkv"))
+
 
 def __main():
     """
@@ -256,11 +280,15 @@ def __main():
     args = parser.parse_args()
     if args.heightLimit is None:
         args.heightLimit = terminalSize.lines - args.beginPadding - args.endPadding
+        print("use default height limit:", args.heightLimit)
     if args.widthLimit is None:
         args.widthLimit = terminalSize.columns - args.leftPadding
-
-    assert (args.heightLimit <= terminalSize.lines), f"height limit exceeds terminal height {terminalSize.lines}"
-    assert (args.widthLimit <= terminalSize.columns), f"width limit exceeds terminal width {terminalSize.columns}"
+        print("use default width limit:", args.widthLimit)
+    if args.heightLimit > terminalSize.lines:
+        raise ValueError(f"height limit exceeds terminal height {terminalSize.lines}")
+    if args.widthLimit > terminalSize.columns:
+        raise ValueError(f"width limit exceeds terminal width {terminalSize.columns}")
+    
 
     args.interpolation = getattr(__cv2, f"INTER_{args.interpolation}")
 
