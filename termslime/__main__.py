@@ -223,7 +223,7 @@ def __main():
     # set up the argument parser
     parser = __argparse.ArgumentParser(
         prog="tslime",
-        description="Termslime displays images in your terminal with true colors. Project home page: https://github.com/garyzbm/termslime.",
+        description="Termslime displays images in your terminal with true colors. Project home page: https://github.com/xsjk/termslime.",
     )
 
     # add arguments

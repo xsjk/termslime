@@ -23,7 +23,7 @@
 
 ## Requirements
 
-+ A terminal emulator with true color support.
++ A terminal emulator with true color and ANSI escape sequence support.
 + Python >= 3.7.
 
 
@@ -31,21 +31,21 @@
 
 Install with [pipx](https://pypa.github.io/pipx/) (recommended):
 ```shell
-pipx install termslime
+pipx install git+https://github.com/xsjk/termslime.git@ANSI
 ```
 
 Or install with pip:
 ```shell
-pip install termslime
+pip install git+https://github.com/xsjk/termslime.git@ANSI
 ```
 
 
 ## Usage
 
 ```
-usage: tslime [-h] [-hl HEIGHTLIMIT] [-wl WIDTHLIMIT] [-bp BEGINPADDING] [-ep ENDPADDING] [-lp LEFTPADDING] path
+usage: tslime [-h] [-hl HEIGHTLIMIT] [-wl WIDTHLIMIT] [-bp BEGINPADDING] [-ep ENDPADDING] [-lp LEFTPADDING] [--interpolation {AREA,BITS,BITS2,CUBIC,LANCZOS4,LINEAR,LINEAR_EXACT,MAX,NEAREST,NEAREST_EXACT,TAB_SIZE,TAB_SIZE2}] path
 
-Termslime displays images in your terminal with true colors. Project home page: https://github.com/garyzbm/termslime
+Termslime displays images in your terminal with true colors. Project home page: https://github.com/xsjk/termslime.
 
 positional arguments:
   path                  path to an image file or a directory containing image files
@@ -62,16 +62,27 @@ options:
                         number of empty lines after the image
   -lp LEFTPADDING, --leftPadding LEFTPADDING
                         number of empty spaces at the beginning of each line of the image
+  --interpolation {AREA,BITS,BITS2,CUBIC,LANCZOS4,LINEAR,LINEAR_EXACT,MAX,NEAREST,NEAREST_EXACT,TAB_SIZE,TAB_SIZE2}
+                        interpolation method used to resize the image
 ```
 
+## Examples
+
+Display an image in the terminal with adpative height and width limits:
+```shell
+python -m termslime test.png
+```
+
+Play a video in the terminal with adpative height and width limits:
+```shell
+python -m termslime test.mp4
+```
 
 ## Credits
 
 This project is greatly inspired by [this post](https://lucamug.medium.com/terminal-pixel-art-ad386d186dad).
 
 The following projects are crucial to the development of this project:
-+ [colorful](https://github.com/timofurrer/colorful)
-+ [pillow](https://python-pillow.org)
 + [poetry](https://python-poetry.org)
 
 
