@@ -68,14 +68,21 @@ options:
 
 ## Examples
 
+You can find the example files in the [examples](examples) directory.
+
 Display an image in the terminal with adpative height and width limits:
 ```shell
-python -m termslime test.png
+tslime test.png
+```
+
+Display a transparent imgae in the terminal with adpative height and width limits:
+```shell
+tslime test_alpha.png
 ```
 
 Play a video in the terminal with adpative height and width limits:
 ```shell
-python -m termslime test.mp4
+tslime test.mp4
 ```
 
 ## Credits
