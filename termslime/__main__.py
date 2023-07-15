@@ -2,6 +2,7 @@ import argparse as __argparse
 import os as __os
 import platform as __platform
 import cv2 as __cv2
+import numpy as __np
 import random as __random
 import time as __time
 import threading as __threading
@@ -34,7 +35,8 @@ def __display_img(
     """
 
     # open the image
-    img = __cv2.imread(imgPath, __cv2.IMREAD_UNCHANGED)
+    img = __np.fromfile(imgPath, dtype=__np.uint8)
+    img = __cv2.imdecode(img, __cv2.IMREAD_UNCHANGED)
     img = __cv2.cvtColor(img, __cv2.COLOR_BGR2RGBA)
     imgWidth, imgHeight = img.shape[1], img.shape[0]
 
