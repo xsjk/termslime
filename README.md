@@ -2,7 +2,7 @@
 
 <h1><b>Termslime</b></h1>
 
-<p>Termslime displays images in your terminal with true colors.</p>
+<p>Termslime displays images or videos in your terminal with true colors.</p>
 
 <p>
     <img src="https://img.shields.io/pypi/v/termslime.svg">
@@ -90,8 +90,9 @@ tslime test.mp4
 This project is greatly inspired by [this post](https://lucamug.medium.com/terminal-pixel-art-ad386d186dad).
 
 The following projects are crucial to the development of this project:
-+ [poetry](https://python-poetry.org)
++ [opencv-python](https://docs.opencv.org/4.x/)
++ [joblib](https://joblib.readthedocs.io/en/latest/)
 
 
 ---
-*<p align="center">This project is published under [MIT](LICENSE).<br>A [Gary Zhang](https://github.com/garyzbm) project.<br>- :tada: -</p>*
+*<p align="center">This project is published under [MIT](LICENSE).<br>A [Gary Zhang](https://github.com/garyzbm) and [xsjk](https://github.com/xsjk) project.<br>- :tada: -</p>*
