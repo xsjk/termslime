@@ -23,7 +23,7 @@
 
 ## Requirements
 
-+ A terminal emulator with true color and ANSI escape sequence support.
++ A terminal emulator with true color support.
 + Python >= 3.7.
 
 
@@ -31,12 +31,12 @@
 
 Install with [pipx](https://pypa.github.io/pipx/) (recommended):
 ```shell
-pipx install git+https://github.com/xsjk/termslime.git@ANSI
+pipx install git+https://github.com/xsjk/termslime.git
 ```
 
 Or install with pip:
 ```shell
-pip install git+https://github.com/xsjk/termslime.git@ANSI
+pip install git+https://github.com/xsjk/termslime.git
 ```
 
 
