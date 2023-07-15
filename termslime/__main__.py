@@ -1,5 +1,6 @@
 import argparse as __argparse
 import os as __os
+import platform as __platform
 import cv2 as __cv2
 import random as __random
 import time as __time
@@ -7,6 +8,9 @@ import threading as __threading
 import queue as __queue
 import joblib as __joblib
 
+if __platform.system() == "Windows":
+    __os.system("color")
+    
 def __display_img(
     imgPath: str,
     heightLimit: int,
@@ -99,8 +103,6 @@ def __display_video(
         leftPadding (int): number of empty spaces at the beginning of each line of the image
         interpolation (int): interpolation method used to resize the image
     """
-
-    import cv2 as __cv2
 
     cap = __cv2.VideoCapture(videoPath)
 
