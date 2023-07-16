@@ -92,6 +92,7 @@ def __display_video(
     endPadding: int,
     leftPadding: int,
     interpolation: int,
+    ignoreFrameRate: bool,
 ) -> None:
     """
     Display a video by printing half blocks with foreground and background colors to the terminal.
@@ -104,6 +105,7 @@ def __display_video(
         endPadding (int): number of empty lines after the image
         leftPadding (int): number of empty spaces at the beginning of each line of the image
         interpolation (int): interpolation method used to resize the image
+        ignoreFrameRate (bool): if True, ignore the frame rate of the video and display the video as fast as possible
     """
 
     cap = __cv2.VideoCapture(videoPath)
@@ -139,7 +141,7 @@ def __display_video(
 
         def to_str(frame):
             return "".join(
-                __joblib.Parallel(n_jobs=16)(
+                __joblib.Parallel(n_jobs=__joblib.cpu_count())(
                     __joblib.delayed(row_to_str)(frame, i)
                     for i in range(0, frame.shape[0], 2)
                 )
@@ -179,15 +181,16 @@ def __display_video(
 
             cur_frame = cap.get(__cv2.CAP_PROP_POS_FRAMES)
 
-            if virtual_time < cur_frame / fps:
-                # too fast
-                __time.sleep(0.01)
-            else:
-                # too slow
-                num_frames_to_skip = int(virtual_time * fps - cur_frame)
-                print(end=f"\033[{1};0H\033[0m skip {num_frames_to_skip} frames")
-                if num_frames_to_skip > 0:
-                    cap.set(__cv2.CAP_PROP_POS_FRAMES, cur_frame + num_frames_to_skip)
+            if not ignoreFrameRate:
+                if virtual_time < cur_frame / fps:
+                    # too fast
+                    __time.sleep(0.01)
+                else:
+                    # too slow
+                    num_frames_to_skip = int(virtual_time * fps - cur_frame)
+                    print(end=f"\033[{1};0H\033[0m skip {num_frames_to_skip} frames")
+                    if num_frames_to_skip > 0:
+                        cap.set(__cv2.CAP_PROP_POS_FRAMES, cur_frame + num_frames_to_skip)
 
             _, frame = cap.read()
             # print(end=f"\033[{1};0H\033[0m tostr FPS: {1/(__time.time()-t):.2f}")
@@ -278,6 +281,13 @@ def __main():
         help="interpolation method used to resize the image",
         choices=[v[6:] for v in dir(__cv2) if v.startswith("INTER_")],
     )
+    parser.add_argument(
+        "-a"
+        "--allFrames",
+        dest="ignoreFrameRate",
+        action="store_true",
+        help="display all the frames of the video without considering the frame rate",
+    )
 
     # parse the arguments
     terminalSize = __os.get_terminal_size()
@@ -327,6 +337,7 @@ def __main():
             args.endPadding,
             args.leftPadding,
             args.interpolation,
+            args.ignoreFrameRate,
         )
 
 

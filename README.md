@@ -29,12 +29,6 @@
 
 ## Installation
 
-Install with [pipx](https://pypa.github.io/pipx/) (recommended):
-```shell
-pipx install git+https://github.com/xsjk/termslime.git
-```
-
-Or install with pip:
 ```shell
 pip install git+https://github.com/xsjk/termslime.git
 ```
@@ -43,7 +37,7 @@ pip install git+https://github.com/xsjk/termslime.git
 ## Usage
 
 ```
-usage: tslime [-h] [-hl HEIGHTLIMIT] [-wl WIDTHLIMIT] [-bp BEGINPADDING] [-ep ENDPADDING] [-lp LEFTPADDING] [--interpolation {AREA,BITS,BITS2,CUBIC,LANCZOS4,LINEAR,LINEAR_EXACT,MAX,NEAREST,NEAREST_EXACT,TAB_SIZE,TAB_SIZE2}] path
+usage: tslime [-h] [-hl HEIGHTLIMIT] [-wl WIDTHLIMIT] [-bp BEGINPADDING] [-ep ENDPADDING] [-lp LEFTPADDING] [--interpolation {AREA,BITS,BITS2,CUBIC,LANCZOS4,LINEAR,LINEAR_EXACT,MAX,NEAREST,NEAREST_EXACT,TAB_SIZE,TAB_SIZE2}] [-a--allFrames] path
 
 Termslime displays images in your terminal with true colors. Project home page: https://github.com/xsjk/termslime.
 
@@ -64,6 +58,7 @@ options:
                         number of empty spaces at the beginning of each line of the image
   --interpolation {AREA,BITS,BITS2,CUBIC,LANCZOS4,LINEAR,LINEAR_EXACT,MAX,NEAREST,NEAREST_EXACT,TAB_SIZE,TAB_SIZE2}
                         interpolation method used to resize the image
+  -a--allFrames         display all the frames of the video without considering the frame rate
 ```
 
 ## Examples
@@ -93,6 +88,12 @@ The following projects are crucial to the development of this project:
 + [opencv-python](https://docs.opencv.org/4.x/)
 + [joblib](https://joblib.readthedocs.io/en/latest/)
 
+
+## Uninstallation
+
+```shell
+pip uninstall termslime
+```
 
 ---
 *<p align="center">This project is published under [MIT](LICENSE).<br>A [Gary Zhang](https://github.com/garyzbm) and [xsjk](https://github.com/xsjk) project.<br>- :tada: -</p>*
