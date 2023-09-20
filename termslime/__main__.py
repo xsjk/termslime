@@ -13,7 +13,7 @@ if __platform.system() == "Windows":
     __os.system("color")
     
 def __display_img(
-    imgPath: str,
+    img: str | __np.ndarray,
     heightLimit: int,
     widthLimit: int,
     beginPadding: int,
@@ -25,7 +25,7 @@ def __display_img(
     Display an image by printing half blocks with foreground and background colors to the terminal.
 
     Args:
-        imgPath (str): the path to the image file
+        img (str | np.ndarray): the path to the image file or the image array
         heightLimit (int): maximum number of lines of blocks to display the image in the terminal
         widthLimit (int): maximum number of blocks per line to display the image in the terminal
         beginPadding (int): number of empty lines before the image
@@ -34,10 +34,12 @@ def __display_img(
         interpolation (int): interpolation method used to resize the image
     """
 
-    # open the image
-    img = __np.fromfile(imgPath, dtype=__np.uint8)
-    img = __cv2.imdecode(img, __cv2.IMREAD_UNCHANGED)
-    img = __cv2.cvtColor(img, __cv2.COLOR_BGR2RGBA)
+    if isinstance(img, str):
+        # open the image
+        img = __np.fromfile(img, dtype=__np.uint8)
+        img = __cv2.imdecode(img, __cv2.IMREAD_UNCHANGED)
+        img = __cv2.cvtColor(img, __cv2.COLOR_BGR2RGBA)
+
     imgWidth, imgHeight = img.shape[1], img.shape[0]
 
     # calculate the resize ratio
@@ -112,6 +114,18 @@ def __display_video(
 
     fps = cap.get(__cv2.CAP_PROP_FPS)
     frameCount = int(cap.get(__cv2.CAP_PROP_FRAME_COUNT))
+    if frameCount == 1:
+        _, frame = cap.read()
+        return __display_img(
+            frame,
+            heightLimit,
+            widthLimit,
+            beginPadding,
+            endPadding,
+            leftPadding,
+            interpolation,
+        )
+    
     duration = frameCount / fps
 
     print(f"fps: {fps:.2f}")
@@ -219,7 +233,7 @@ def __is_img_file(path: str) -> bool:
 
 
 def __is_video_file(path: str) -> bool:
-    return any(path.endswith(ext) for ext in (".mp4", ".avi", ".mkv"))
+    return any(path.endswith(ext) for ext in (".mp4", ".avi", ".mkv", ".gif"))
 
 
 def __main():
