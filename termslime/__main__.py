@@ -8,6 +8,7 @@ import time as __time
 import threading as __threading
 import queue as __queue
 import joblib as __joblib
+import re as __re
 
 if __platform.system() == "Windows":
     __os.system("color")
@@ -249,28 +250,38 @@ def __get_file_type(path: str) -> str:
     '''
 
     fmt2prefixes = {
-        'gif': (b"GIF87a", b"GIF89a"),
-        'jpg': (b"\xFF\xD8\xFF",),
-        'png': (b"\x89PNG\r\n\x1a\n",),
-        'bmp': (b"BM",),
-        'ppm': (f"P{i}".encode() for i in '0123456y'),
-        'tiff': (b"MM\x00\x2A", b"II\x2A\x00", b"MM\x2A\x00", b"II\x00\x2A", b"MM\x00\x2B", b"II\x2B\x00"),
-        'webp': (b"RIFF",),
+        'jpg': rb"\xFF\xD8\xFF",
+        'png': rb"\x89PNG\r\n\x1a\n",
+        'bmp': rb"BM",
+        'ppm': rb"P[0-6y]",
+        'tiff': rb"MM\x00\x2A|II\x2A\x00|MM\x2A\x00|II\x00\x2A|MM\x00\x2B|II\x2B\x00",
+        'gif': rb"GIF87a|GIF89a",
+        'webp': rb"RIFF....WEBPVP8[ LX]",
+        'mp4': rb"....ftyp(?:isom|MSNV|mp42|avc[13]|iso2|mp41)",
+        'avi': rb"RIFF....AVI LIST",
+        'mpeg': rb"\x00\x00\x01[\xB3\xBA]",
+        'mov': rb"\x00\x00\x00\x14ftyp(?:qt|isom|mp42|mp41)",
+        'mkv': rb"\x1A\x45\xDF\xA3",
+        'flv': rb"FLV\x01",
+        'wmv': rb"\x30\x26\xB2\x75\x8E\x66\xCF\x11",
+        'ts': rb"\x47",
     }
 
     prefix = open(path, 'rb').read(32)
     
     for fmt, prefixes in fmt2prefixes.items():
-        if any(prefix.startswith(p) for p in prefixes):
+        if __re.search(prefixes, prefix):
+            print(f"Determined file type: {fmt}")
             return fmt
-    
+        
+    print(f"Cannot determine file type, use file extension: {__os.path.splitext(path)[1][1:]}")
     return __os.path.splitext(path)[1][1:].casefold()
 
 def __is_img_file(path: str) -> bool:
     return __get_file_type(path) in ('jpg', 'png', 'bmp', 'ppm', 'tiff', 'webp')
 
 def __is_video_file(path: str) -> bool:
-    return __get_file_type(path) in ('gif', 'mp4', 'avi', 'mpg', 'mpeg', 'mov', 'mkv', 'flv', 'wmv', 'ts', 'mts', 'vob', 'webm')
+    return __get_file_type(path) in ('gif', 'mp4', 'avi', 'mpeg', 'mov', 'mkv', 'flv', 'wmv', 'ts')
 
 def __main():
     """
