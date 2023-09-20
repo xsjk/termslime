@@ -228,13 +228,49 @@ def __display_video(
         cap.release()
 
 
-def __is_img_file(path: str) -> bool:
-    return any(path.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".bmp"))
+def __get_file_type(path: str) -> str:
+    '''
+    Get the file type of the file at the given path.
 
+    Parameters
+    ----------
+    path : str
+        The path to the file.
+
+    Returns
+    -------
+    str : The file type of the file at the given path.
+
+    Notes
+    -----
+    The file type is determined by the first few bytes of the file.
+    If the file type cannot be determined, the file extension is returned.
+
+    '''
+
+    fmt2prefixes = {
+        'gif': (b"GIF87a", b"GIF89a"),
+        'jpg': (b"\xFF\xD8\xFF",),
+        'png': (b"\x89PNG\r\n\x1a\n",),
+        'bmp': (b"BM",),
+        'ppm': (f"P{i}".encode() for i in '0123456y'),
+        'tiff': (b"MM\x00\x2A", b"II\x2A\x00", b"MM\x2A\x00", b"II\x00\x2A", b"MM\x00\x2B", b"II\x2B\x00"),
+        'webp': (b"RIFF",),
+    }
+
+    prefix = open(path, 'rb').read(32)
+    
+    for fmt, prefixes in fmt2prefixes.items():
+        if any(prefix.startswith(p) for p in prefixes):
+            return fmt
+    
+    return __os.path.splitext(path)[1][1:].casefold()
+
+def __is_img_file(path: str) -> bool:
+    return __get_file_type(path) in ('jpg', 'png', 'bmp', 'ppm', 'tiff', 'webp')
 
 def __is_video_file(path: str) -> bool:
-    return any(path.endswith(ext) for ext in (".mp4", ".avi", ".mkv", ".gif"))
-
+    return __get_file_type(path) in ('gif', 'mp4', 'avi', 'mpg', 'mpeg', 'mov', 'mkv', 'flv', 'wmv', 'ts', 'mts', 'vob', 'webm')
 
 def __main():
     """
