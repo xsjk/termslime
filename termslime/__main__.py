@@ -9,6 +9,7 @@ import threading as __threading
 import queue as __queue
 import joblib as __joblib
 import re as __re
+import pkgutil as __pkgutil
 
 if __platform.system() == "Windows":
     __os.system("color")
@@ -126,6 +127,10 @@ def __display_video(
             leftPadding,
             interpolation,
         )
+
+    if __pkgutil.find_loader('ffpyplayer'):
+        from ffpyplayer.player import MediaPlayer as __MediaPlayer
+        audio = __MediaPlayer(videoPath)
     
     duration = frameCount / fps
 
@@ -146,8 +151,8 @@ def __display_video(
         def row_to_str(frame, i):
             s = ""
             for j in range(frame.shape[1]):
-                pU = frame[i, j]
-                pL = frame[i + 1, j]
+                pU = frame[0, j]
+                pL = frame[1, j]
                 s += f"\033[{beginPadding+i//2+1};{leftPadding+j+1}H"
                 s += f"\033[48;2;{pU[0]};{pU[1]};{pU[2]}m"
                 s += f"\033[38;2;{pL[0]};{pL[1]};{pL[2]}m"
@@ -156,13 +161,13 @@ def __display_video(
 
         def to_str(frame):
             return "".join(
-                __joblib.Parallel(n_jobs=__joblib.cpu_count())(
-                    __joblib.delayed(row_to_str)(frame, i)
+                __joblib.Parallel()(
+                    __joblib.delayed(row_to_str)(frame[i:i+2], i)
                     for i in range(0, frame.shape[0], 2)
                 )
             )
 
-        start_time = __time.time()
+        start_time = __time.time() + 1 / fps
         virtual_time: float = 0
 
         def print_str():
@@ -197,11 +202,10 @@ def __display_video(
             cur_frame = cap.get(__cv2.CAP_PROP_POS_FRAMES)
 
             if not ignoreFrameRate:
+                # sync video and virtual time
                 if virtual_time < cur_frame / fps:
-                    # too fast
-                    __time.sleep(0.01)
+                    __time.sleep(1 / fps)
                 else:
-                    # too slow
                     num_frames_to_skip = int(virtual_time * fps - cur_frame)
                     print(end=f"\033[{1};0H\033[0m skip {num_frames_to_skip} frames")
                     if num_frames_to_skip > 0:
