@@ -10,9 +10,15 @@ import queue as __queue
 import joblib as __joblib
 import re as __re
 import pkgutil as __pkgutil
+from datetime import timedelta
 
 if __platform.system() == "Windows":
     __os.system("color")
+
+ENABLE_AUDIO = __pkgutil.find_loader('ffpyplayer') is not None
+if ENABLE_AUDIO:
+    from ffpyplayer.player import MediaPlayer as __MediaPlayer
+
     
 def __display_img(
     img: str | __np.ndarray,
@@ -88,6 +94,46 @@ def __display_img(
     print(end="\n" * endPadding)
 
 
+class ProgressBar:
+
+    BAR_COLOR_EMPTY = "\033[38;2;58;58;58m"
+    BAR_COLOR_FULL = "\033[38;2;58;95;0m"
+    TIME_COLOR = "\033[38;2;66;179;189m"
+
+    def __init__(self, width: int, total: float, x: int = 0, y: int = 0) -> None:
+        self.width = width
+        self.total = total
+        self.x = x
+        self.y = y
+        self.current = 0
+
+    def init(self):
+        time_str = f"{timedelta(seconds=0)} / {timedelta(seconds=int(self.total))}"
+        self.bar_width = self.width - len(time_str) - 2
+        print(end=f"\033[0m\033[{self.y};{self.x}H{self.BAR_COLOR_EMPTY}{'━'*self.bar_width}  {self.TIME_COLOR}{time_str}")
+
+    def set(self, value: float) -> None:
+        x = value / self.total * self.bar_width
+        x_int = int(round(x))
+        if x_int == self.bar_width:
+            return self.finish()
+        
+        print(end=f"\033[0m\033[{self.y};{self.x}H{self.BAR_COLOR_FULL}{'━'*x_int}")
+        print(end=f"╸{self.BAR_COLOR_EMPTY}" if x - int(x) < 0.5 else f"{self.BAR_COLOR_EMPTY}╺")
+        print(end=f"{'━'*int(self.bar_width-x_int-1)}  {self.TIME_COLOR}{timedelta(seconds=int(value))}")
+
+    def finish(self) -> None:
+        print(end=f"\033[0m\033[{self.y};{self.x}H{self.BAR_COLOR_FULL}{'━'*self.bar_width}  {self.TIME_COLOR}{timedelta(seconds=int(self.total))}")
+
+    def __enter__(self):
+        self.init()
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is not None:
+            raise exc_value
+        self.finish()
+
 def __display_video(
     videoPath: str,
     heightLimit: int,
@@ -128,8 +174,10 @@ def __display_video(
             interpolation,
         )
 
-    if __pkgutil.find_loader('ffpyplayer'):
-        from ffpyplayer.player import MediaPlayer as __MediaPlayer
+    heightLimit -= 2 # line for progress bar
+
+    # start the audio player
+    if ENABLE_AUDIO:
         audio = __MediaPlayer(videoPath)
     
     duration = frameCount / fps
@@ -167,7 +215,15 @@ def __display_video(
                 )
             )
 
-        start_time = __time.time() + 1 / fps
+        # wait for the first audio frame
+        while ENABLE_AUDIO:
+            audio_frame, val = audio.get_frame()
+            if audio_frame:
+                pic, time = audio_frame
+                if time > 0:
+                    break
+
+        start_time = __time.time()
         virtual_time: float = 0
 
         def print_str():
@@ -181,7 +237,6 @@ def __display_video(
                 else:
                     print(end=s)
                     virtual_time = __time.time() - start_time
-                    # print(end=f"\033[{2};0H\033[0m print FPS: {1/(__time.time()-t):.2f}")
 
         print_thread = __threading.Thread(target=print_str)
         print_thread.start()
@@ -194,25 +249,35 @@ def __display_video(
         resizeRatio = max(1, imgHeight / (heightLimit * 2), imgWidth / widthLimit)
         newSize = (int(imgWidth / resizeRatio), int(imgHeight / resizeRatio / 2) * 2)
 
-        while frame is not None:
-            resized_frame = __cv2.resize(frame, newSize, interpolation=interpolation)
-            real_colored_frame = __cv2.cvtColor(resized_frame, __cv2.COLOR_BGR2RGBA)
-            data_queue.put(to_str(real_colored_frame))
 
-            cur_frame = cap.get(__cv2.CAP_PROP_POS_FRAMES)
+        with ProgressBar(
+            width=newSize[0], 
+            total=duration, 
+            x=leftPadding+1, 
+            y=beginPadding+newSize[1]//2+1
+        ) as progress_bar:
 
-            if not ignoreFrameRate:
-                # sync video and virtual time
-                if virtual_time < cur_frame / fps:
-                    __time.sleep(1 / fps)
-                else:
-                    num_frames_to_skip = int(virtual_time * fps - cur_frame)
-                    print(end=f"\033[{1};0H\033[0m skip {num_frames_to_skip} frames")
-                    if num_frames_to_skip > 0:
-                        cap.set(__cv2.CAP_PROP_POS_FRAMES, cur_frame + num_frames_to_skip)
+            while frame is not None:
+                resized_frame = __cv2.resize(frame, newSize, interpolation=interpolation)
+                real_colored_frame = __cv2.cvtColor(resized_frame, __cv2.COLOR_BGR2RGBA)
+                data_queue.put(to_str(real_colored_frame))
 
-            _, frame = cap.read()
-            # print(end=f"\033[{1};0H\033[0m tostr FPS: {1/(__time.time()-t):.2f}")
+                cur_frame = cap.get(__cv2.CAP_PROP_POS_FRAMES)
+        
+                progress_bar.set(cur_frame / fps)
+
+                if not ignoreFrameRate:
+                    # sync video and virtual time
+                    if virtual_time < cur_frame / fps:
+                        __time.sleep(1 / fps)
+                    else:
+                        num_frames_to_skip = int(virtual_time * fps - cur_frame)
+                        # print(end=f"\033[{1};0H\033[0m skip {num_frames_to_skip} frames")
+                        if num_frames_to_skip > 0:
+                            cap.set(__cv2.CAP_PROP_POS_FRAMES, cur_frame + num_frames_to_skip)
+
+                _, frame = cap.read()
+
 
     except KeyboardInterrupt:
         pass
@@ -228,7 +293,7 @@ def __display_video(
         print("\033[?25h", end="")
 
         # print the end padding
-        print(f"\033[{beginPadding+newSize[1]//2+endPadding+1};1H", end="")
+        print(f"\033[{beginPadding+newSize[1]//2+endPadding+2};1H", end="")
 
         cap.release()
 
@@ -322,7 +387,7 @@ def __main():
         "-bp",
         "--beginPadding",
         type=int,
-        default=1,
+        default=0,
         help="number of empty lines before the image",
     )
     parser.add_argument(
