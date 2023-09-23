@@ -7,7 +7,7 @@
 <p>
     <img src="https://img.shields.io/pypi/v/termslime.svg">
     <img src="https://img.shields.io/pypi/pyversions/termslime.svg">
-    <img src="https://img.shields.io/github/last-commit/garyzbm/termslime">
+    <img src="https://img.shields.io/github/last-commit/xsjk/termslime">
 </p>
 
 </div>
@@ -67,18 +67,21 @@ You can find the example files in the [examples](examples) directory.
 
 Display an image in the terminal with adpative height and width limits:
 ```shell
+tslime test.jpg
+```
+![](screenshots/screenshot1.png)
+
+Display a transparent image in the terminal with adpative height and width limits:
+```shell
 tslime test.png
 ```
-
-Display a transparent imgae in the terminal with adpative height and width limits:
-```shell
-tslime test_alpha.png
-```
+![](screenshots/screenshot2.png)
 
 Play a video in the terminal with adpative height and width limits:
 ```shell
 tslime test.mp4
 ```
+![](screenshots/screenshot3.png)
 
 ## Credits
 
