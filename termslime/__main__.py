@@ -28,6 +28,7 @@ def __display_img(
     endPadding: int,
     leftPadding: int,
     interpolation: int,
+    verbose: bool
 ) -> None:
     """
     Display an image by printing half blocks with foreground and background colors to the terminal.
@@ -40,6 +41,7 @@ def __display_img(
         endPadding (int): number of empty lines after the image
         leftPadding (int): number of empty spaces at the beginning of each line of the image
         interpolation (int): interpolation method used to resize the image
+        verbose (bool): if True, print more information
     """
 
     if isinstance(img, str):
@@ -143,6 +145,7 @@ def __display_video(
     leftPadding: int,
     interpolation: int,
     ignoreFrameRate: bool,
+    verbose: bool
 ) -> None:
     """
     Display a video by printing half blocks with foreground and background colors to the terminal.
@@ -156,6 +159,7 @@ def __display_video(
         leftPadding (int): number of empty spaces at the beginning of each line of the image
         interpolation (int): interpolation method used to resize the image
         ignoreFrameRate (bool): if True, ignore the frame rate of the video and display the video as fast as possible
+        verbose (bool): if True, print more information
     """
 
     cap = __cv2.VideoCapture(videoPath)
@@ -182,9 +186,10 @@ def __display_video(
     
     duration = frameCount / fps
 
-    print(f"fps: {fps:.2f}")
-    print(f"frame count: {frameCount}")
-    print(f"duration: {duration:.2f}s")
+    if verbose:
+        print(f"fps: {fps:.2f}")
+        print(f"frame count: {frameCount}")
+        print(f"duration: {duration:.2f}s")
 
     try:
         # clear the terminal
@@ -298,7 +303,7 @@ def __display_video(
         cap.release()
 
 
-def __get_file_type(path: str) -> str:
+def __get_file_type(path: str, verbose: bool = True) -> str:
     '''
     Get the file type of the file at the given path.
 
@@ -340,17 +345,18 @@ def __get_file_type(path: str) -> str:
     
     for fmt, prefixes in fmt2prefixes.items():
         if __re.search(prefixes, prefix):
-            print(f"Determined file type: {fmt}")
+            if verbose:
+                print(f"Determined file type: {fmt}")
             return fmt
-        
-    print(f"Cannot determine file type, use file extension: {__os.path.splitext(path)[1][1:]}")
+    if verbose:
+        print(f"Cannot determine file type, use file extension: {__os.path.splitext(path)[1][1:]}")
     return __os.path.splitext(path)[1][1:].casefold()
 
-def __is_img_file(path: str) -> bool:
-    return __get_file_type(path) in ('jpg', 'png', 'bmp', 'ppm', 'tiff', 'webp')
+def __is_img_file(path: str, verbose: bool = False) -> bool:
+    return __get_file_type(path, verbose) in ('jpg', 'png', 'bmp', 'ppm', 'tiff', 'webp')
 
-def __is_video_file(path: str) -> bool:
-    return __get_file_type(path) in ('gif', 'mp4', 'avi', 'mpeg', 'mov', 'mkv', 'flv', 'wmv', 'ts')
+def __is_video_file(path: str, verbose: bool = False) -> bool:
+    return __get_file_type(path, verbose) in ('gif', 'mp4', 'avi', 'mpeg', 'mov', 'mkv', 'flv', 'wmv', 'ts')
 
 def __main():
     """
@@ -418,16 +424,24 @@ def __main():
         action="store_true",
         help="display all the frames of the video without considering the frame rate",
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="print more information",
+    )
 
     # parse the arguments
     terminalSize = __os.get_terminal_size()
     args = parser.parse_args()
     if args.heightLimit is None:
         args.heightLimit = terminalSize.lines - args.beginPadding - args.endPadding
-        print("use default height limit:", args.heightLimit)
+        if args.verbose:
+            print("use default height limit:", args.heightLimit)
     if args.widthLimit is None:
         args.widthLimit = terminalSize.columns - args.leftPadding
-        print("use default width limit:", args.widthLimit)
+        if args.verbose:
+            print("use default width limit:", args.widthLimit)
     if args.heightLimit > terminalSize.lines:
         raise ValueError(f"height limit exceeds terminal height {terminalSize.lines}")
     if args.widthLimit > terminalSize.columns:
@@ -447,7 +461,7 @@ def __main():
         assert len(imgList) > 0, f"{filePath} does not contain any image files"
         filePath = __os.path.join(filePath, __random.choice(imgList))
 
-    if __is_img_file(filePath):
+    if __is_img_file(filePath, args.verbose):
         __display_img(
             filePath,
             args.heightLimit,
@@ -456,9 +470,10 @@ def __main():
             args.endPadding,
             args.leftPadding,
             args.interpolation,
+            args.verbose
         )
 
-    elif __is_video_file(filePath):
+    elif __is_video_file(filePath, args.verbose):
         __display_video(
             filePath,
             args.heightLimit,
@@ -468,6 +483,7 @@ def __main():
             args.leftPadding,
             args.interpolation,
             args.ignoreFrameRate,
+            args.verbose
         )
 
 

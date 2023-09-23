@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "termslime"
-version = "0.3.1"
-description = "Termslime displays images in your terminal with true colors."
+version = "0.3.2"
+description = "Termslime displays images or videos in your terminal with true colors."
 license = "MIT"
 authors = ["Gary Zhang <garyzhang2002@hotmail.com>", "xsjk <xsjk17@outlook.com>"]
 maintainers = ["Gary Zhang <garyzhang2002@hotmail.com>", "xsjk <xsjk17@outlook.com>"]
